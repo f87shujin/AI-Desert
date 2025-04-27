@@ -1,38 +1,76 @@
-import streamlit as st
-from PIL import Image
-import io
-from ultralytics import YOLO
+from flask import Flask, render_template, jsonify, request, redirect, url_for
+from pymongo import MongoClient
+from bson import ObjectId
+import requests
 
-st.title("Vegetable Detection with YOLOv8")
+app = Flask(__name__)
 
-# Load the YOLOv8 model
-model = YOLO('yolov8n.pt')  # Load a pretrained model
+# MongoDB connection
+client = MongoClient("mongodb+srv://f87study:admin1234@cluster0.fqatder.mongodb.net/Desert")
+db = client.get_database()
 
-# Create a file uploader widget
-uploaded_file = st.file_uploader("Choose an image file", type=["jpg", "jpeg", "png"])
+# Ollama configuration
+OLLAMA_API_URL = "http://localhost:11434/api/generate"  # Default Ollama port
+OLLAMA_MODEL = "chef"  # Using our custom chef model
 
-if uploaded_file is not None:
-    # Display the uploaded image
-    image = Image.open(uploaded_file)
-    st.image(image, caption="Original Image", use_column_width=True)
+@app.route('/')
+def index():
+    return render_template('index.html')
+
+@app.route('/api/deserts')
+def get_deserts():
+    deserts = list(db.Desert.find())
+    # Convert ObjectId to string for JSON serialization
+    for desert in deserts:
+        desert['_id'] = str(desert['_id'])
+    return jsonify(deserts)
+
+@app.route('/add-recipe', methods=['GET', 'POST'])
+def add_recipe():
+    if request.method == 'POST':
+        # Get form data
+        name = request.form.get('name')
+        img_url = request.form.get('img_url')
+        ingredients = request.form.get('ingredients').split('\n')
+        recipe = request.form.get('recipe')
+        
+        # Create new recipe document
+        new_recipe = {
+            'name': name,
+            'img': img_url,
+            'ingredients': [ing.strip() for ing in ingredients if ing.strip()],
+            'recipe': recipe
+        }
+        
+        # Insert into MongoDB
+        db.Desert.insert_one(new_recipe)
+        
+        return redirect(url_for('index'))
     
-    # Run YOLOv8 inference
-    results = model(image)
+    return render_template('add_recipe.html')
+
+@app.route('/chat')
+def chat():
+    return render_template('chat.html')
+
+@app.route('/api/chat', methods=['POST'])
+def chat_api():
+    data = request.json
+    prompt = data.get('prompt', '')
     
-    # Get detected objects
-    detected_objects = []
-    for result in results:
-        boxes = result.boxes
-        for box in boxes:
-            class_id = int(box.cls[0])
-            class_name = model.names[class_id]
-            confidence = float(box.conf[0])
-            detected_objects.append(f"{class_name} ({confidence:.2f})")
-    
-    # Display detection results
-    st.subheader("Detected Objects:")
-    if detected_objects:
-        for obj in detected_objects:
-            st.write(obj)
-    else:
-        st.write("No objects detected")
+    try:
+        response = requests.post(
+            OLLAMA_API_URL,
+            json={
+                "model": OLLAMA_MODEL,
+                "prompt": prompt,
+                "stream": False
+            }
+        )
+        response.raise_for_status()
+        return jsonify(response.json())
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+if __name__ == '__main__':
+    app.run(debug=True)

@@ -1,0 +1,114 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Desert Gallery</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        .desert-card {
+            transition: transform 0.3s;
+            cursor: pointer;
+            margin-bottom: 20px;
+        }
+        .desert-card:hover {
+            transform: scale(1.03);
+        }
+        .desert-image {
+            height: 200px;
+            object-fit: cover;
+        }
+        .modal-image {
+            max-height: 400px;
+            object-fit: contain;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-dark bg-dark">
+        <div class="container">
+            <span class="navbar-brand mb-0 h1">Desert Gallery</span>
+            <div>
+                <a href="/add-recipe" class="btn btn-success me-2">Add Recipe</a>
+                <a href="/chat" class="btn btn-outline-light">AI Chat</a>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4">
+        <div class="row" id="desertGrid">
+            <!-- Deserts will be loaded here -->
+        </div>
+    </div>
+
+    <!-- Desert Details Modal -->
+    <div class="modal fade" id="desertModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="desertName"></h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <img src="" class="img-fluid modal-image mb-3" id="desertImage">
+                    <h6>Ingredients:</h6>
+                    <ul id="ingredientsList"></ul>
+                    <h6>Recipe:</h6>
+                    <p id="recipeText"></p>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Load deserts when page loads
+        document.addEventListener('DOMContentLoaded', function() {
+            fetch('/api/deserts')
+                .then(response => response.json())
+                .then(deserts => {
+                    const grid = document.getElementById('desertGrid');
+                    deserts.forEach(desert => {
+                        const col = document.createElement('div');
+                        col.className = 'col-md-4 col-sm-6';
+                        col.innerHTML = `
+                            <div class="card desert-card" onclick="showDesertDetails('${desert._id}')">
+                                <img src="${desert.img}" class="card-img-top desert-image" alt="${desert.name}">
+                                <div class="card-body">
+                                    <h5 class="card-title">${desert.name}</h5>
+                                </div>
+                            </div>
+                        `;
+                        grid.appendChild(col);
+                    });
+                });
+        });
+
+        // Show desert details in modal
+        function showDesertDetails(desertId) {
+            fetch('/api/deserts')
+                .then(response => response.json())
+                .then(deserts => {
+                    const desert = deserts.find(d => d._id === desertId);
+                    if (desert) {
+                        document.getElementById('desertName').textContent = desert.name;
+                        document.getElementById('desertImage').src = desert.img;
+                        
+                        const ingredientsList = document.getElementById('ingredientsList');
+                        ingredientsList.innerHTML = '';
+                        desert.ingredients.forEach(ingredient => {
+                            const li = document.createElement('li');
+                            li.textContent = ingredient;
+                            ingredientsList.appendChild(li);
+                        });
+                        
+                        document.getElementById('recipeText').textContent = desert.recipe;
+                        
+                        new bootstrap.Modal(document.getElementById('desertModal')).show();
+                    }
+                });
+        }
+    </script>
+</body>
+</html> 
