@@ -192,10 +192,20 @@
             formData.append('image', file);
 
             try {
+                const controller = new AbortController();
+                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
+
                 const response = await fetch('/api/detect', {
                     method: 'POST',
-                    body: formData
+                    body: formData,
+                    signal: controller.signal
                 });
+
+                clearTimeout(timeoutId);
+
+                if (!response.ok) {
+                    throw new Error(`HTTP error! status: ${response.status}`);
+                }
 
                 const data = await response.json();
                 if (data.error) {
@@ -204,7 +214,11 @@
                     displayIngredients(data.ingredients);
                 }
             } catch (error) {
-                alert('Error connecting to the server');
+                if (error.name === 'AbortError') {
+                    alert('Request timed out. Please try again with a smaller image or better connection.');
+                } else {
+                    alert('Error connecting to the server: ' + error.message);
+                }
             } finally {
                 loading.style.display = 'none';
             }
