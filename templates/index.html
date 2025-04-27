@@ -73,10 +73,18 @@
                         const col = document.createElement('div');
                         col.className = 'col-md-4 col-sm-6';
                         col.innerHTML = `
-                            <div class="card desert-card" onclick="showDesertDetails('${desert._id}')">
+                            <div class="card desert-card" style="cursor: pointer;" onclick="showDesertDetails('${desert._id}')">
                                 <img src="${desert.img}" class="card-img-top desert-image" alt="${desert.name}">
                                 <div class="card-body">
                                     <h5 class="card-title">${desert.name}</h5>
+                                    <div class="d-flex justify-content-end mt-3">
+                                        <a href="/edit-recipe/${desert._id}" class="btn btn-outline-warning btn-sm me-2" onclick="event.stopPropagation()">
+                                            <i class="fas fa-edit"></i> Edit
+                                        </a>
+                                        <button class="btn btn-outline-danger btn-sm" onclick="event.stopPropagation(); deleteRecipe('${desert._id}')">
+                                            <i class="fas fa-trash"></i> Delete
+                                        </button>
+                                    </div>
                                 </div>
                             </div>
                         `;
@@ -108,6 +116,22 @@
                         new bootstrap.Modal(document.getElementById('desertModal')).show();
                     }
                 });
+        }
+
+        // Add delete function
+        async function deleteRecipe(recipeId) {
+            if (confirm('Are you sure you want to delete this recipe?')) {
+                try {
+                    const response = await fetch(`/delete-recipe/${recipeId}`, {
+                        method: 'POST',
+                    });
+                    if (response.ok) {
+                        window.location.reload();
+                    }
+                } catch (error) {
+                    console.error('Error deleting recipe:', error);
+                }
+            }
         }
     </script>
 </body>

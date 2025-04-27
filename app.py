@@ -49,6 +49,42 @@ def add_recipe():
     
     return render_template('add_recipe.html')
 
+@app.route('/edit-recipe/<recipe_id>', methods=['GET', 'POST'])
+def edit_recipe(recipe_id):
+    if request.method == 'POST':
+        # Get form data
+        name = request.form.get('name')
+        img_url = request.form.get('img_url')
+        ingredients = request.form.get('ingredients').split('\n')
+        recipe = request.form.get('recipe')
+        
+        # Update recipe document
+        db.Desert.update_one(
+            {'_id': ObjectId(recipe_id)},
+            {
+                '$set': {
+                    'name': name,
+                    'img': img_url,
+                    'ingredients': [ing.strip() for ing in ingredients if ing.strip()],
+                    'recipe': recipe
+                }
+            }
+        )
+        
+        return redirect(url_for('index'))
+    
+    # Get the recipe for editing
+    recipe = db.Desert.find_one({'_id': ObjectId(recipe_id)})
+    if recipe:
+        recipe['_id'] = str(recipe['_id'])
+        return render_template('edit_recipe.html', recipe=recipe)
+    return redirect(url_for('index'))
+
+@app.route('/delete-recipe/<recipe_id>', methods=['POST'])
+def delete_recipe(recipe_id):
+    db.Desert.delete_one({'_id': ObjectId(recipe_id)})
+    return redirect(url_for('index'))
+
 @app.route('/chat')
 def chat():
     return render_template('chat.html')
