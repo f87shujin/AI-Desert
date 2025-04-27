@@ -166,7 +166,8 @@
             if (isUser) {
                 contentDiv.textContent = message;
             } else {
-                contentDiv.innerHTML = marked.parse(message);
+                contentDiv.innerHTML = '';
+                typeMessage(message, contentDiv);
             }
             
             const timeDiv = document.createElement('div');
@@ -177,6 +178,27 @@
             messageDiv.appendChild(timeDiv);
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
+        }
+
+        async function typeMessage(message, element) {
+            const parsedMessage = marked.parse(message);
+            const tempDiv = document.createElement('div');
+            tempDiv.innerHTML = parsedMessage;
+            const textContent = tempDiv.textContent;
+            
+            let i = 0;
+            const typingSpeed = 30; // milliseconds per character
+            
+            function typeNextChar() {
+                if (i < textContent.length) {
+                    const char = textContent.charAt(i);
+                    element.innerHTML = marked.parse(textContent.substring(0, i + 1));
+                    i++;
+                    setTimeout(typeNextChar, typingSpeed);
+                }
+            }
+            
+            typeNextChar();
         }
 
         async function sendMessage() {
