@@ -6,7 +6,12 @@
     <title>AI Chat</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <link href="https://cdn.jsdelivr.net/npm/github-markdown-css/github-markdown.min.css" rel="stylesheet">
     <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
         .chat-container {
             height: calc(100vh - 200px);
             display: flex;
@@ -16,31 +21,94 @@
             flex-grow: 1;
             overflow-y: auto;
             padding: 20px;
+            background-color: #1e1e1e;
         }
         .message {
-            margin-bottom: 15px;
-            max-width: 80%;
+            margin-bottom: 20px;
+            max-width: 85%;
+            padding: 15px;
+            border-radius: 15px;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
         }
         .user-message {
             margin-left: auto;
-            background-color: #007bff;
+            background-color: #0d6efd;
             color: white;
             border-radius: 15px 15px 0 15px;
-            padding: 10px 15px;
         }
         .bot-message {
             margin-right: auto;
-            background-color: #f8f9fa;
+            background-color: #2d2d2d;
+            color: #e0e0e0;
             border-radius: 15px 15px 15px 0;
-            padding: 10px 15px;
         }
         .input-group {
             padding: 20px;
-            background-color: #f8f9fa;
-            border-top: 1px solid #dee2e6;
+            background-color: #1e1e1e;
+            border-top: 1px solid #333;
+        }
+        .form-control {
+            background-color: #2d2d2d;
+            border-color: #333;
+            color: #e0e0e0;
+        }
+        .form-control:focus {
+            background-color: #2d2d2d;
+            border-color: #0d6efd;
+            color: #e0e0e0;
+            box-shadow: 0 0 0 0.25rem rgba(13, 110, 253, 0.25);
         }
         .loading {
             display: none;
+            position: fixed;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            z-index: 1000;
+        }
+        .markdown-body {
+            background-color: transparent !important;
+            color: #e0e0e0;
+        }
+        .message-time {
+            font-size: 0.75rem;
+            opacity: 0.7;
+            margin-top: 5px;
+        }
+        .message-content {
+            word-wrap: break-word;
+        }
+        .bot-message img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin: 10px 0;
+        }
+        .bot-message pre {
+            background-color: #1a1a1a;
+            padding: 16px;
+            border-radius: 6px;
+            overflow-x: auto;
+            color: #e0e0e0;
+        }
+        .bot-message code {
+            background-color: #1a1a1a;
+            padding: 2px 4px;
+            border-radius: 3px;
+            font-family: monospace;
+            color: #e0e0e0;
+        }
+        .bot-message ul, .bot-message ol {
+            padding-left: 20px;
+        }
+        .bot-message a {
+            color: #0d6efd;
+        }
+        .bot-message blockquote {
+            border-left: 4px solid #0d6efd;
+            padding-left: 10px;
+            margin-left: 0;
+            color: #aaa;
         }
     </style>
 </head>
@@ -54,8 +122,11 @@
 
     <div class="container chat-container">
         <div class="chat-messages" id="chatMessages">
-            <div class="message bot-message">
-                Hello! I'm your AI assistant. How can I help you today?
+            <div class="message bot-message markdown-body">
+                <div class="message-content">
+                    Hello! I'm your AI chef assistant. How can I help you with cooking today? 🍳
+                </div>
+                <div class="message-time">Just now</div>
             </div>
         </div>
         
@@ -67,23 +138,43 @@
         </div>
     </div>
 
-    <div class="loading text-center" id="loading">
+    <div class="loading" id="loading">
         <div class="spinner-border text-primary" role="status">
             <span class="visually-hidden">Loading...</span>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
     <script>
         const chatMessages = document.getElementById('chatMessages');
         const userInput = document.getElementById('userInput');
         const sendButton = document.getElementById('sendButton');
         const loading = document.getElementById('loading');
 
+        function formatTime() {
+            return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
+        }
+
         function addMessage(message, isUser = false) {
             const messageDiv = document.createElement('div');
-            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message'}`;
-            messageDiv.textContent = message;
+            messageDiv.className = `message ${isUser ? 'user-message' : 'bot-message markdown-body'}`;
+            
+            const contentDiv = document.createElement('div');
+            contentDiv.className = 'message-content';
+            
+            if (isUser) {
+                contentDiv.textContent = message;
+            } else {
+                contentDiv.innerHTML = marked.parse(message);
+            }
+            
+            const timeDiv = document.createElement('div');
+            timeDiv.className = 'message-time';
+            timeDiv.textContent = formatTime();
+            
+            messageDiv.appendChild(contentDiv);
+            messageDiv.appendChild(timeDiv);
             chatMessages.appendChild(messageDiv);
             chatMessages.scrollTop = chatMessages.scrollHeight;
         }
