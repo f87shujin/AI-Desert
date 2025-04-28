@@ -2,10 +2,12 @@ from flask import Flask, render_template, jsonify, request, redirect, url_for
 from pymongo import MongoClient
 from bson import ObjectId
 import requests
-from ultralytics import YOLO
 import os
 import json
 from ollama import Client
+import base64
+from ultralytics import YOLO
+from inference_sdk import InferenceHTTPClient
 
 app = Flask(__name__)
 
@@ -13,16 +15,21 @@ app = Flask(__name__)
 client = MongoClient("mongodb+srv://f87study:admin1234@cluster0.fqatder.mongodb.net/Desert")
 db = client.get_database()
 
-# Initialize YOLO model
-yolo_model = YOLO('yolov8n.pt')
-
 # Ollama configuration
-OLLAMA_API_URL = "http://localhost:11434/api/generate"  # Default Ollama port
-OLLAMA_MODEL = "chef"  # Using our custom chef model
+OLLAMA_API_URL = "http://localhost:11434/api/generate"
+OLLAMA_MODEL = "chef"
 
 # Initialize Ollama client for recipe generation
 recipe_client = Client(host='http://localhost:11434')
 recipe_model = 'ingredients-chef'
+
+# Initialize YOLO model with the default YOLOv8 model
+model = YOLO('yolov8n.pt')  # Using the default YOLOv8 nano model
+
+CLIENT = InferenceHTTPClient(
+    api_url="https://serverless.roboflow.com",
+    api_key="g7A7DM8HhOu5hpCY4jll"
+)
 
 @app.route('/')
 def index():
@@ -106,51 +113,60 @@ def detect_page():
 
 @app.route('/api/detect', methods=['POST'])
 def detect_ingredients():
+    print("Received detection request")
     if 'image' not in request.files:
+        print("No image file in request")
         return jsonify({'error': 'No image provided'}), 400
     
     file = request.files['image']
     if file.filename == '':
+        print("Empty filename")
         return jsonify({'error': 'No selected file'}), 400
     
-    # Save the uploaded file temporarily
-    temp_path = 'temp_image.jpg'
+    # Check file size (limit to 5MB)
+    file.seek(0, 2)
+    file_size = file.tell()
+    file.seek(0)
+    if file_size > 5 * 1024 * 1024:
+        return jsonify({'error': 'File size too large. Please upload an image smaller than 5MB.'}), 400
+    
+    print(f"Processing file: {file.filename} (size: {file_size} bytes)")
+    
     try:
+        # Save the file temporarily
+        temp_path = 'temp_image.jpg'
         file.save(temp_path)
         
-        # Run YOLO detection with timeout
-        try:
-            results = yolo_model(temp_path)
-        except Exception as e:
-            return jsonify({'error': f'Error during detection: {str(e)}'}), 500
+        # Run Roboflow detection
+        print("Running Roboflow detection...")
+        result = CLIENT.infer(temp_path, model_id="vegetables-el4g6/1")
         
         # Process results
         ingredients = []
-        for result in results:
-            for box in result.boxes:
-                class_id = int(box.cls[0])
-                confidence = float(box.conf[0])
-                class_name = result.names[class_id]
+        if 'predictions' in result:
+            for prediction in result['predictions']:
+                class_name = prediction['class'].lower()
+                confidence = prediction['confidence']
                 
-                # Filter for food-related classes (you may need to adjust this based on your YOLO model)
-                if class_name.lower() in ['apple', 'banana', 'orange', 'carrot', 'broccoli', 'tomato', 'potato', 'onion', 'garlic', 'chicken', 'beef', 'fish', 'egg', 'bread', 'cheese', 'milk', 'butter', 'rice', 'pasta']:
-                    ingredients.append({
-                        'name': class_name,
-                        'confidence': confidence
-                    })
+                ingredients.append({
+                    'name': class_name,
+                    'confidence': confidence
+                })
         
+        # Clean up temp file
+        if os.path.exists(temp_path):
+            os.remove(temp_path)
+        
+        print(f"Detection complete. Found {len(ingredients)} ingredients")
         return jsonify({'ingredients': ingredients})
     
     except Exception as e:
-        return jsonify({'error': str(e)}), 500
-    
-    finally:
-        # Clean up
-        if os.path.exists(temp_path):
-            try:
-                os.remove(temp_path)
-            except:
-                pass
+        error_msg = f"Error: {str(e)}"
+        print(error_msg)
+        # Clean up temp file if it exists
+        if 'temp_path' in locals() and os.path.exists(temp_path):
+            os.remove(temp_path)
+        return jsonify({'error': error_msg}), 500
 
 @app.route('/api/chat', methods=['POST'])
 def chat_api():
@@ -202,4 +218,4 @@ Please create a recipe that primarily uses the high-confidence ingredients and s
         return jsonify({'error': str(e)}), 500
 
 if __name__ == '__main__':
-    app.run(debug=True)
+    app.run(debug=True, use_reloader=False, host='127.0.0.1', port=5000)

@@ -192,32 +192,44 @@
             formData.append('image', file);
 
             try {
+                console.log('Starting detection...');
                 const controller = new AbortController();
                 const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
 
                 const response = await fetch('/api/detect', {
                     method: 'POST',
                     body: formData,
-                    signal: controller.signal
+                    signal: controller.signal,
+                    headers: {
+                        'Accept': 'application/json'
+                    }
                 });
 
                 clearTimeout(timeoutId);
+                console.log('Response status:', response.status);
 
                 if (!response.ok) {
-                    throw new Error(`HTTP error! status: ${response.status}`);
+                    const errorText = await response.text();
+                    console.error('Server error:', errorText);
+                    throw new Error(`Server error: ${response.status} - ${errorText}`);
                 }
 
                 const data = await response.json();
+                console.log('Detection result:', data);
+
                 if (data.error) {
                     alert('Error detecting ingredients: ' + data.error);
                 } else {
                     displayIngredients(data.ingredients);
                 }
             } catch (error) {
+                console.error('Detection error:', error);
                 if (error.name === 'AbortError') {
                     alert('Request timed out. Please try again with a smaller image or better connection.');
+                } else if (error.message.includes('Failed to fetch')) {
+                    alert('Cannot connect to the server. Please make sure the server is running and try again.');
                 } else {
-                    alert('Error connecting to the server: ' + error.message);
+                    alert('Error: ' + error.message);
                 }
             } finally {
                 loading.style.display = 'none';
