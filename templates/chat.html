@@ -113,10 +113,28 @@
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">AI Chat</span>
-            <a href="/" class="btn btn-outline-light">Back to Gallery</a>
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-utensils me-2"></i>
+                AI Desert
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="fas fa-home me-1"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/detect"><i class="fas fa-camera me-1"></i> Detect</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/chat"><i class="fas fa-comments me-1"></i> Chat</a>
+                    </li>
+                </ul>
+            </div>
         </div>
     </nav>
 

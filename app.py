@@ -8,6 +8,8 @@ from ollama import Client
 import base64
 from ultralytics import YOLO
 from inference_sdk import InferenceHTTPClient
+import cv2
+import numpy as np
 
 app = Flask(__name__)
 
@@ -137,35 +139,81 @@ def detect_ingredients():
         temp_path = 'temp_image.jpg'
         file.save(temp_path)
         
+        # Read the image for visualization
+        img = cv2.imread(temp_path)
+        img = cv2.cvtColor(img, cv2.COLOR_BGR2RGB)  # Convert to RGB
+        
         # Run Roboflow detection
         print("Running Roboflow detection...")
         result = CLIENT.infer(temp_path, model_id="vegetables-el4g6/1")
         
-        # Process results
+        # Process results and draw boxes
         ingredients = []
         if 'predictions' in result:
             for prediction in result['predictions']:
                 class_name = prediction['class'].lower()
                 confidence = prediction['confidence']
                 
+                # Get bounding box coordinates
+                x = int(prediction['x'])
+                y = int(prediction['y'])
+                width = int(prediction['width'])
+                height = int(prediction['height'])
+                
+                # Calculate box coordinates
+                x1 = x - width // 2
+                y1 = y - height // 2
+                x2 = x + width // 2
+                y2 = y + height // 2
+                
+                # Draw rectangle
+                cv2.rectangle(img, (x1, y1), (x2, y2), (0, 255, 0), 2)
+                
+                # Prepare label text
+                label = f"{class_name}: {confidence:.2f}"
+                
+                # Get text size
+                (text_width, text_height), _ = cv2.getTextSize(label, cv2.FONT_HERSHEY_SIMPLEX, 0.5, 1)
+                
+                # Draw label background
+                cv2.rectangle(img, (x1, y1 - text_height - 4), (x1 + text_width, y1), (0, 255, 0), -1)
+                
+                # Draw label text
+                cv2.putText(img, label, (x1, y1 - 4), cv2.FONT_HERSHEY_SIMPLEX, 0.5, (0, 0, 0), 1)
+                
                 ingredients.append({
                     'name': class_name,
                     'confidence': confidence
                 })
         
-        # Clean up temp file
+        # Save the annotated image
+        annotated_path = 'annotated_image.jpg'
+        cv2.imwrite(annotated_path, cv2.cvtColor(img, cv2.COLOR_RGB2BGR))
+        
+        # Convert annotated image to base64
+        with open(annotated_path, 'rb') as img_file:
+            annotated_image_base64 = base64.b64encode(img_file.read()).decode('utf-8')
+        
+        # Clean up temp files
         if os.path.exists(temp_path):
             os.remove(temp_path)
+        if os.path.exists(annotated_path):
+            os.remove(annotated_path)
         
         print(f"Detection complete. Found {len(ingredients)} ingredients")
-        return jsonify({'ingredients': ingredients})
+        return jsonify({
+            'ingredients': ingredients,
+            'annotated_image': annotated_image_base64
+        })
     
     except Exception as e:
         error_msg = f"Error: {str(e)}"
         print(error_msg)
-        # Clean up temp file if it exists
+        # Clean up temp files if they exist
         if 'temp_path' in locals() and os.path.exists(temp_path):
             os.remove(temp_path)
+        if 'annotated_path' in locals() and os.path.exists(annotated_path):
+            os.remove(annotated_path)
         return jsonify({'error': error_msg}), 500
 
 @app.route('/api/chat', methods=['POST'])
@@ -187,8 +235,8 @@ def chat_api():
     except Exception as e:
         return jsonify({"error": str(e)}), 500
 
-@app.route('/api/generate-recipe', methods=['POST'])
-def generate_recipe():
+@app.route('/api/generate-recipe-from-detect', methods=['POST'])
+def generate_recipe_from_detect():
     try:
         data = request.get_json()
         ingredients = data.get('ingredients', [])
@@ -214,6 +262,70 @@ Please create a recipe that primarily uses the high-confidence ingredients and s
         
         return jsonify({'recipe': response['response']})
     
+    except Exception as e:
+        return jsonify({'error': str(e)}), 500
+
+@app.route('/api/generate-recipe-from-name', methods=['POST'])
+def generate_recipe_from_name():
+    try:
+        data = request.get_json()
+        dish_name = data.get('dish_name')
+        
+        if not dish_name:
+            return jsonify({'error': 'Dish name is required'}), 400
+        
+        # Generate recipe using Ollama
+        response = recipe_client.generate(
+            model=recipe_model,
+            prompt=f"""Create a detailed recipe for {dish_name}. Format the response as a JSON object with these exact fields:
+
+{{
+    "name": "Creative name for the recipe",
+    "ingredients": [
+        "1 cup flour",
+        "2 eggs",
+        "etc..."
+    ],
+    "recipe": "Step 1: Do this...\nStep 2: Then do that..."
+}}
+
+Make sure to:
+1. Only return the JSON object, nothing else
+2. Ingredients should be strings, not objects
+3. Each ingredient should include both quantity and name"""
+        )
+        
+        # Extract the JSON part from the response
+        response_text = response['response'].strip()
+        # Find the first { and last } to extract the JSON
+        start = response_text.find('{')
+        end = response_text.rfind('}') + 1
+        if start == -1 or end == 0:
+            raise ValueError("Invalid response format from AI")
+        
+        json_str = response_text[start:end]
+        recipe_data = json.loads(json_str)
+        
+        # Convert ingredients to strings if they're objects
+        ingredients = []
+        for ingredient in recipe_data['ingredients']:
+            if isinstance(ingredient, dict):
+                # If it's an object, try to format it as a string
+                quantity = ingredient.get('quantity', '')
+                name = ingredient.get('name', '')
+                ingredients.append(f"{quantity} {name}".strip())
+            else:
+                # If it's already a string, use it as is
+                ingredients.append(str(ingredient))
+        
+        return jsonify({
+            'name': recipe_data['name'],
+            'ingredients': ingredients,
+            'recipe': recipe_data['recipe']
+        })
+    
+    except json.JSONDecodeError as e:
+        return jsonify({'error': f'Failed to parse AI response: {str(e)}'}), 500
     except Exception as e:
         return jsonify({'error': str(e)}), 500
 

@@ -7,37 +7,105 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
+        body {
+            background-color: #121212;
+            color: #e0e0e0;
+        }
         .desert-card {
             transition: transform 0.3s;
             cursor: pointer;
             margin-bottom: 20px;
+            background-color: #1e1e1e;
+            border: 1px solid #333;
         }
         .desert-card:hover {
             transform: scale(1.03);
+            border-color: #0d6efd;
         }
         .desert-image {
             height: 200px;
             object-fit: cover;
         }
+        .modal-content {
+            background-color: #1e1e1e;
+            color: #e0e0e0;
+        }
+        .modal-header {
+            border-bottom: 1px solid #333;
+        }
+        .modal-footer {
+            border-top: 1px solid #333;
+        }
+        .btn-close {
+            filter: invert(1) grayscale(100%) brightness(200%);
+        }
         .modal-image {
             max-height: 400px;
             object-fit: contain;
         }
+        .card-title {
+            color: #e0e0e0;
+        }
+        .btn-outline-warning {
+            color: #ffc107;
+            border-color: #ffc107;
+        }
+        .btn-outline-warning:hover {
+            background-color: #ffc107;
+            color: #000;
+        }
+        .btn-outline-danger {
+            color: #dc3545;
+            border-color: #dc3545;
+        }
+        .btn-outline-danger:hover {
+            background-color: #dc3545;
+            color: #fff;
+        }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">Desert Gallery</span>
-            <div>
-                <a href="/add-recipe" class="btn btn-success me-2">Add Recipe</a>
-                <a href="/detect" class="btn btn-info me-2">Detect Ingredients</a>
-                <a href="/chat" class="btn btn-outline-light">AI Chat</a>
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-utensils me-2"></i>
+                AI Desert
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav me-auto">
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/"><i class="fas fa-home me-1"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/detect"><i class="fas fa-camera me-1"></i> Detect</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/chat"><i class="fas fa-comments me-1"></i> Chat</a>
+                    </li>
+                </ul>
+                <a href="/add-recipe" class="btn btn-primary">
+                    <i class="fas fa-plus me-2"></i>Add Recipe
+                </a>
             </div>
         </div>
     </nav>
 
     <div class="container mt-4">
+        <h2 class="text-light mb-4"><i class="fas fa-utensils me-2"></i>Desert Gallery</h2>
+        <div class="row mb-4">
+            <div class="col-md-6">
+                <div class="input-group">
+                    <span class="input-group-text bg-dark text-light border-secondary">
+                        <i class="fas fa-search"></i>
+                    </span>
+                    <input type="text" class="form-control bg-dark text-light border-secondary" id="searchInput" 
+                           placeholder="Search deserts..." onkeyup="filterDeserts()">
+                </div>
+            </div>
+        </div>
         <div class="row" id="desertGrid">
             <!-- Deserts will be loaded here -->
         </div>
@@ -69,30 +137,46 @@
             fetch('/api/deserts')
                 .then(response => response.json())
                 .then(deserts => {
-                    const grid = document.getElementById('desertGrid');
-                    deserts.forEach(desert => {
-                        const col = document.createElement('div');
-                        col.className = 'col-md-4 col-sm-6';
-                        col.innerHTML = `
-                            <div class="card desert-card" style="cursor: pointer;" onclick="showDesertDetails('${desert._id}')">
-                                <img src="${desert.img}" class="card-img-top desert-image" alt="${desert.name}">
-                                <div class="card-body">
-                                    <h5 class="card-title">${desert.name}</h5>
-                                    <div class="d-flex justify-content-end mt-3">
-                                        <a href="/edit-recipe/${desert._id}" class="btn btn-outline-warning btn-sm me-2" onclick="event.stopPropagation()">
-                                            <i class="fas fa-edit"></i> Edit
-                                        </a>
-                                        <button class="btn btn-outline-danger btn-sm" onclick="event.stopPropagation(); deleteRecipe('${desert._id}')">
-                                            <i class="fas fa-trash"></i> Delete
-                                        </button>
-                                    </div>
-                                </div>
-                            </div>
-                        `;
-                        grid.appendChild(col);
-                    });
+                    window.deserts = deserts; // Store deserts globally for filtering
+                    displayDeserts(deserts);
                 });
         });
+
+        // Function to display deserts
+        function displayDeserts(deserts) {
+            const grid = document.getElementById('desertGrid');
+            grid.innerHTML = ''; // Clear existing content
+            deserts.forEach(desert => {
+                const col = document.createElement('div');
+                col.className = 'col-md-4 col-sm-6';
+                col.innerHTML = `
+                    <div class="card desert-card" style="cursor: pointer;" onclick="showDesertDetails('${desert._id}')">
+                        <img src="${desert.img}" class="card-img-top desert-image" alt="${desert.name}">
+                        <div class="card-body">
+                            <h5 class="card-title">${desert.name}</h5>
+                            <div class="d-flex justify-content-end mt-3">
+                                <a href="/edit-recipe/${desert._id}" class="btn btn-outline-warning btn-sm me-2" onclick="event.stopPropagation()">
+                                    <i class="fas fa-edit"></i> Edit
+                                </a>
+                                <button class="btn btn-outline-danger btn-sm" onclick="event.stopPropagation(); deleteRecipe('${desert._id}')">
+                                    <i class="fas fa-trash"></i> Delete
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                `;
+                grid.appendChild(col);
+            });
+        }
+
+        // Function to filter deserts
+        function filterDeserts() {
+            const searchText = document.getElementById('searchInput').value.toLowerCase();
+            const filteredDeserts = window.deserts.filter(desert => 
+                desert.name.toLowerCase().includes(searchText)
+            );
+            displayDeserts(filteredDeserts);
+        }
 
         // Show desert details in modal
         function showDesertDetails(desertId) {

@@ -10,19 +10,25 @@
         body {
             background-color: #121212;
             color: #e0e0e0;
+            min-height: 100vh;
         }
-        .detection-container {
-            min-height: calc(100vh - 200px);
+        .navbar {
+            background-color: #1e1e1e !important;
+            border-bottom: 1px solid #333;
+        }
+        .container {
+            max-width: 1200px;
             padding: 20px;
         }
         .upload-area {
             border: 2px dashed #0d6efd;
             border-radius: 10px;
-            padding: 20px;
+            padding: 40px;
             text-align: center;
             background-color: #1e1e1e;
             cursor: pointer;
             transition: all 0.3s ease;
+            margin-bottom: 30px;
         }
         .upload-area:hover {
             border-color: #0a58ca;
@@ -31,104 +37,156 @@
         .upload-area i {
             font-size: 48px;
             color: #0d6efd;
-            margin-bottom: 10px;
+            margin-bottom: 15px;
         }
-        .preview-container {
-            margin-top: 20px;
-            text-align: center;
+        .image-container {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 30px;
+            margin-bottom: 30px;
         }
-        .preview-image {
-            max-width: 100%;
-            max-height: 400px;
-            border-radius: 10px;
-            display: none;
-        }
-        .detected-ingredients {
+        .image-box {
             background-color: #1e1e1e;
             border-radius: 10px;
             padding: 20px;
-            margin-top: 20px;
-            display: none;
+            text-align: center;
+        }
+        .image-box img {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            margin-bottom: 15px;
+        }
+        .image-box h3 {
+            color: #e0e0e0;
+            margin-bottom: 15px;
+        }
+        .results-container {
+            background-color: #1e1e1e;
+            border-radius: 10px;
+            padding: 25px;
+            margin-top: 30px;
+        }
+        .ingredient-list {
+            list-style: none;
+            padding: 0;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+            gap: 15px;
         }
         .ingredient-item {
             background-color: #2d2d2d;
-            border-radius: 5px;
-            padding: 10px;
-            margin-bottom: 10px;
+            padding: 15px;
+            border-radius: 8px;
             display: flex;
             justify-content: space-between;
             align-items: center;
+            transition: transform 0.2s ease;
+        }
+        .ingredient-item:hover {
+            transform: translateY(-2px);
         }
         .confidence-badge {
             background-color: #0d6efd;
             color: white;
-            padding: 5px 10px;
+            padding: 5px 12px;
             border-radius: 15px;
-            font-size: 0.8rem;
+            font-size: 0.9rem;
+        }
+        .btn-primary {
+            background-color: #0d6efd;
+            border: none;
+            padding: 10px 25px;
+            font-weight: 500;
+        }
+        .btn-primary:hover {
+            background-color: #0a58ca;
+        }
+        .loading {
+            display: none;
+            text-align: center;
+            padding: 30px;
+        }
+        .loading i {
+            font-size: 2rem;
+            color: #0d6efd;
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            100% { transform: rotate(360deg); }
         }
         .recipe-container {
             background-color: #1e1e1e;
             border-radius: 10px;
-            padding: 20px;
-            margin-top: 20px;
-            display: none;
+            padding: 25px;
+            margin-top: 30px;
         }
-        .loading {
-            display: none;
-            position: fixed;
-            top: 50%;
-            left: 50%;
-            transform: translate(-50%, -50%);
-            z-index: 1000;
+        .markdown-body {
+            color: #e0e0e0;
         }
-        .btn-primary {
-            background-color: #0d6efd;
-            border-color: #0d6efd;
-        }
-        .btn-primary:hover {
-            background-color: #0a58ca;
-            border-color: #0a58ca;
+        .markdown-body h1, .markdown-body h2, .markdown-body h3 {
+            color: #e0e0e0;
         }
     </style>
 </head>
 <body>
-    <nav class="navbar navbar-dark bg-dark">
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <span class="navbar-brand mb-0 h1">Ingredient Detection</span>
-            <div>
-                <a href="/" class="btn btn-outline-light me-2">Gallery</a>
-                <a href="/chat" class="btn btn-outline-light">Chat</a>
+            <a class="navbar-brand" href="/">
+                <i class="fas fa-utensils me-2"></i>
+                AI Desert
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="/"><i class="fas fa-home me-1"></i> Home</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link active" href="/detect"><i class="fas fa-camera me-1"></i> Detect</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="/chat"><i class="fas fa-comments me-1"></i> Chat</a>
+                    </li>
+                </ul>
             </div>
         </div>
     </nav>
 
-    <div class="container detection-container">
+    <div class="container">
         <div class="upload-area" id="uploadArea">
             <i class="fas fa-cloud-upload-alt"></i>
             <h4>Upload Image</h4>
-            <p>Click or drag and drop an image to detect ingredients</p>
+            <p class="text-muted">Click or drag and drop an image to detect ingredients</p>
             <input type="file" id="imageInput" accept="image/*" style="display: none;">
         </div>
 
-        <div class="preview-container">
-            <img id="previewImage" class="preview-image" alt="Preview">
+        <div class="loading" id="loading">
+            <i class="fas fa-spinner"></i>
+            <p class="mt-3">Processing image...</p>
         </div>
 
-        <div class="detected-ingredients" id="detectedIngredients">
-            <h4>Detected Ingredients</h4>
-            <div id="ingredientsList"></div>
-            <button class="btn btn-primary mt-3" id="generateRecipe">Generate Recipe</button>
+        <div class="image-container" id="imageContainer" style="display: none;">
+            <div class="image-box">
+                <h3><i class="fas fa-image me-2"></i>Original Image</h3>
+                <img id="originalImage" src="" alt="Original Image">
+            </div>
+            <div class="image-box">
+                <h3><i class="fas fa-search me-2"></i>Detected Ingredients</h3>
+                <img id="annotatedImage" src="" alt="Annotated Image">
+            </div>
         </div>
 
-        <div class="recipe-container" id="recipeContainer">
-            <h4>Generated Recipe</h4>
+        <div class="results-container" id="results" style="display: none;">
+            <h3 class="mb-4"><i class="fas fa-list me-2"></i>Detected Ingredients</h3>
+            <ul class="ingredient-list" id="ingredientList"></ul>
+        </div>
+
+        <div class="recipe-container" id="recipeContainer" style="display: none;">
+            <h3 class="mb-4"><i class="fas fa-book me-2"></i>Generated Recipe</h3>
             <div id="recipeContent" class="markdown-body"></div>
-        </div>
-    </div>
-
-    <div class="loading" id="loading">
-        <div class="spinner-border text-primary" role="status">
-            <span class="visually-hidden">Loading...</span>
         </div>
     </div>
 
@@ -137,13 +195,14 @@
     <script>
         const uploadArea = document.getElementById('uploadArea');
         const imageInput = document.getElementById('imageInput');
-        const previewImage = document.getElementById('previewImage');
-        const detectedIngredients = document.getElementById('detectedIngredients');
-        const ingredientsList = document.getElementById('ingredientsList');
-        const generateRecipeBtn = document.getElementById('generateRecipe');
+        const originalImage = document.getElementById('originalImage');
+        const annotatedImage = document.getElementById('annotatedImage');
+        const ingredientList = document.getElementById('ingredientList');
+        const loading = document.getElementById('loading');
+        const results = document.getElementById('results');
+        const imageContainer = document.getElementById('imageContainer');
         const recipeContainer = document.getElementById('recipeContainer');
         const recipeContent = document.getElementById('recipeContent');
-        const loading = document.getElementById('loading');
 
         // Handle drag and drop
         uploadArea.addEventListener('dragover', (e) => {
@@ -179,108 +238,89 @@
         function handleImage(file) {
             const reader = new FileReader();
             reader.onload = (e) => {
-                previewImage.src = e.target.result;
-                previewImage.style.display = 'block';
+                originalImage.src = e.target.result;
                 detectIngredients(file);
             };
             reader.readAsDataURL(file);
         }
 
-        async function detectIngredients(file) {
+        function detectIngredients(file) {
             loading.style.display = 'block';
+            imageContainer.style.display = 'none';
+            results.style.display = 'none';
+            recipeContainer.style.display = 'none';
+
             const formData = new FormData();
             formData.append('image', file);
 
-            try {
-                console.log('Starting detection...');
-                const controller = new AbortController();
-                const timeoutId = setTimeout(() => controller.abort(), 30000); // 30 second timeout
-
-                const response = await fetch('/api/detect', {
-                    method: 'POST',
-                    body: formData,
-                    signal: controller.signal,
-                    headers: {
-                        'Accept': 'application/json'
-                    }
-                });
-
-                clearTimeout(timeoutId);
-                console.log('Response status:', response.status);
-
-                if (!response.ok) {
-                    const errorText = await response.text();
-                    console.error('Server error:', errorText);
-                    throw new Error(`Server error: ${response.status} - ${errorText}`);
-                }
-
-                const data = await response.json();
-                console.log('Detection result:', data);
+            fetch('/api/detect', {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
+                imageContainer.style.display = 'grid';
+                results.style.display = 'block';
 
                 if (data.error) {
-                    alert('Error detecting ingredients: ' + data.error);
-                } else {
-                    displayIngredients(data.ingredients);
+                    alert(data.error);
+                    return;
                 }
-            } catch (error) {
-                console.error('Detection error:', error);
-                if (error.name === 'AbortError') {
-                    alert('Request timed out. Please try again with a smaller image or better connection.');
-                } else if (error.message.includes('Failed to fetch')) {
-                    alert('Cannot connect to the server. Please make sure the server is running and try again.');
-                } else {
-                    alert('Error: ' + error.message);
-                }
-            } finally {
-                loading.style.display = 'none';
-            }
-        }
 
-        function displayIngredients(ingredients) {
-            ingredientsList.innerHTML = '';
-            ingredients.forEach(ingredient => {
-                const div = document.createElement('div');
-                div.className = 'ingredient-item';
-                div.innerHTML = `
-                    <span>${ingredient.name}</span>
-                    <span class="confidence-badge">${Math.round(ingredient.confidence * 100)}%</span>
-                `;
-                ingredientsList.appendChild(div);
-            });
-            detectedIngredients.style.display = 'block';
-        }
+                // Display annotated image
+                annotatedImage.src = 'data:image/jpeg;base64,' + data.annotated_image;
 
-        generateRecipeBtn.addEventListener('click', async () => {
-            loading.style.display = 'block';
-            const ingredients = Array.from(ingredientsList.children).map(div => {
-                return {
-                    name: div.querySelector('span:first-child').textContent,
-                    confidence: parseInt(div.querySelector('.confidence-badge').textContent) / 100
-                };
-            });
-
-            try {
-                const response = await fetch('/api/generate-recipe', {
-                    method: 'POST',
-                    headers: {
-                        'Content-Type': 'application/json',
-                    },
-                    body: JSON.stringify({ ingredients })
+                // Display ingredients list
+                ingredientList.innerHTML = '';
+                data.ingredients.forEach(ingredient => {
+                    const li = document.createElement('li');
+                    li.className = 'ingredient-item';
+                    li.innerHTML = `
+                        <span>${ingredient.name}</span>
+                        <span class="confidence-badge">${Math.round(ingredient.confidence * 100)}%</span>
+                    `;
+                    ingredientList.appendChild(li);
                 });
 
-                const data = await response.json();
+                // Show recipe generation button
+                const recipeBtn = document.createElement('button');
+                recipeBtn.className = 'btn btn-primary mt-4';
+                recipeBtn.innerHTML = '<i class="fas fa-magic me-2"></i>Generate Recipe';
+                recipeBtn.onclick = () => generateRecipe(data.ingredients);
+                results.appendChild(recipeBtn);
+            })
+            .catch(error => {
+                loading.style.display = 'none';
+                alert('Error processing image: ' + error);
+            });
+        }
+
+        function generateRecipe(ingredients) {
+            loading.style.display = 'block';
+            
+            fetch('/api/generate-recipe-from-detect', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ ingredients })
+            })
+            .then(response => response.json())
+            .then(data => {
+                loading.style.display = 'none';
                 if (data.error) {
                     alert('Error generating recipe: ' + data.error);
                 } else {
                     recipeContent.innerHTML = marked.parse(data.recipe);
                     recipeContainer.style.display = 'block';
                 }
-            } catch (error) {
-                alert('Error connecting to the server');
-            } finally {
+            })
+            .catch(error => {
                 loading.style.display = 'none';
-            }
-        });
+                alert('Error connecting to the server');
+            });
+        }
     </script>
 </body>
 </html> 
