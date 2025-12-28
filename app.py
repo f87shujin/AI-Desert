@@ -12,12 +12,16 @@ from dotenv import load_dotenv
 import secrets
 from datetime import datetime
 import random
+from werkzeug.middleware.proxy_fix import ProxyFix
 
 # Load environment variables
 load_dotenv()
 
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
+
+# Handle proxy headers for proper URL generation behind nginx
+app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
 
 # MongoDB connection
 client = MongoClient(os.getenv('MONGODB_URI'))
