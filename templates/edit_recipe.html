@@ -57,7 +57,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="/">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-utensils me-2"></i>
                 AI Desert
             </a>
@@ -67,13 +67,13 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="fas fa-home me-1"></i> Home</a>
+                        <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home me-1"></i> Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/detect"><i class="fas fa-camera me-1"></i> Detect</a>
+                        <a class="nav-link" href="{{ url_for('detect') }}"><i class="fas fa-camera me-1"></i> Detect</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/chat"><i class="fas fa-comments me-1"></i> Chat</a>
+                        <a class="nav-link" href="{{ url_for('chat') }}"><i class="fas fa-comments me-1"></i> Chat</a>
                     </li>
                 </ul>
             </div>
@@ -82,7 +82,7 @@
 
     <div class="container">
         <div class="form-container">
-            <form method="POST" action="/edit-recipe/{{ recipe._id }}">
+            <form method="POST" action="{{ url_for('edit_recipe', recipe_id=recipe._id) }}">
                 <div class="form-group">
                     <label for="name">Recipe Name</label>
                     <input type="text" class="form-control" id="name" name="name" value="{{ recipe.name }}" required>

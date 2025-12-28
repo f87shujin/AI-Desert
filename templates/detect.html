@@ -132,7 +132,7 @@
 <body>
     <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <a class="navbar-brand" href="/">
+            <a class="navbar-brand" href="{{ url_for('index') }}">
                 <i class="fas fa-utensils me-2"></i>
                 AI Desert
             </a>
@@ -142,13 +142,13 @@
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="/"><i class="fas fa-home me-1"></i> Home</a>
+                        <a class="nav-link" href="{{ url_for('index') }}"><i class="fas fa-home me-1"></i> Home</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link active" href="/detect"><i class="fas fa-camera me-1"></i> Detect</a>
+                        <a class="nav-link active" href="{{ url_for('detect') }}"><i class="fas fa-camera me-1"></i> Detect</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="/chat"><i class="fas fa-comments me-1"></i> Chat</a>
+                        <a class="nav-link" href="{{ url_for('chat') }}"><i class="fas fa-comments me-1"></i> Chat</a>
                     </li>
                 </ul>
             </div>
@@ -253,7 +253,7 @@
             const formData = new FormData();
             formData.append('image', file);
 
-            fetch('/api/detect', {
+            fetch(BASE_URL + '/api/detect', {
                 method: 'POST',
                 body: formData
             })
@@ -305,8 +305,8 @@
 
         function generateRecipe(ingredients) {
             loading.style.display = 'block';
-            
-            fetch('/api/generate-recipe-from-detect', {
+
+            fetch(BASE_URL + '/api/generate-recipe-from-detect', {
                 method: 'POST',
                 headers: {
                     'Content-Type': 'application/json',
