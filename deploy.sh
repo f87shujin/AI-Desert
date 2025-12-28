@@ -84,19 +84,25 @@ echo -e "${GREEN}Step 9: Configuring Nginx...${NC}"
 sudo sed -i "s|/home/yourusername|/home/$(whoami)|g" $APP_DIR/nginx-ai-desert.conf
 
 echo ""
-echo -e "${YELLOW}Choose how to access your site:${NC}"
-echo "1) Subdomain (e.g., recipes.yourdomain.com) - Recommended"
-echo "2) Path (e.g., yourdomain.com/recipes)"
-read -p "Enter choice (1 or 2): " choice
+echo -e "${YELLOW}Do you have a domain name?${NC}"
+echo "1) No, I will access via IP address (e.g., http://192.168.1.100/recipes)"
+echo "2) Yes, I have a domain name"
+read -p "Enter choice (1 or 2): " domain_choice
 
-if [ "$choice" = "1" ]; then
-    read -p "Enter your subdomain (e.g., recipes.yourdomain.com): " subdomain
-    sudo sed -i "s|recipes.yourdomain.com|$subdomain|g" $APP_DIR/nginx-ai-desert.conf
+if [ "$domain_choice" = "2" ]; then
+    read -p "Enter your domain name (e.g., yourdomain.com): " domain_name
+    sudo sed -i "s|server_name _;|server_name $domain_name;|g" $APP_DIR/nginx-ai-desert.conf
+    sudo sed -i "s|listen 80 default_server;|listen 80;|g" $APP_DIR/nginx-ai-desert.conf
 fi
 
 # Copy nginx config
 sudo cp $APP_DIR/nginx-ai-desert.conf /etc/nginx/sites-available/$APP_NAME
 sudo ln -sf /etc/nginx/sites-available/$APP_NAME /etc/nginx/sites-enabled/
+
+# Remove default nginx site if it exists
+if [ -f "/etc/nginx/sites-enabled/default" ]; then
+    sudo rm /etc/nginx/sites-enabled/default
+fi
 
 # Test nginx config
 sudo nginx -t
@@ -123,15 +129,31 @@ echo "  Check status:     sudo systemctl status $APP_NAME"
 echo "  Restart Nginx:    sudo systemctl restart nginx"
 echo ""
 
-if [ "$choice" = "1" ]; then
-    echo -e "${GREEN}Access your app at: http://$subdomain${NC}"
-    echo -e "${YELLOW}To enable SSL:${NC} sudo certbot --nginx -d $subdomain"
+# Get server IP
+SERVER_IP=$(hostname -I | awk '{print $1}')
+
+if [ "$domain_choice" = "2" ]; then
+    echo -e "${GREEN}Access your sites:${NC}"
+    echo "  Site 1 (port 8000): http://$domain_name"
+    echo "  AI Desert:          http://$domain_name/recipes"
+    echo ""
+    echo -e "${YELLOW}To enable SSL:${NC} sudo certbot --nginx -d $domain_name"
+    echo ""
+    echo -e "${YELLOW}Make sure to:${NC}"
+    echo "  1. Point your domain DNS to this server IP: $SERVER_IP"
+    echo "  2. Open port 80 (and 443 for HTTPS) in your firewall"
 else
-    echo -e "${GREEN}Access your app at: http://yourdomain.com/recipes${NC}"
+    echo -e "${GREEN}Access your sites via IP:${NC}"
+    echo "  Site 1 (port 8000): http://$SERVER_IP"
+    echo "  AI Desert:          http://$SERVER_IP/recipes"
+    echo ""
+    echo -e "${YELLOW}Make sure to:${NC}"
+    echo "  1. Open port 80 in your firewall: sudo ufw allow 80/tcp"
 fi
 
+echo "  2. Check that .env file has all required API keys"
 echo ""
-echo -e "${YELLOW}Note: Make sure to:${NC}"
-echo "  1. Configure your domain DNS to point to this server"
-echo "  2. Open port 80 (and 443 for HTTPS) in your firewall"
-echo "  3. Check that .env file has all required API keys"
+echo -e "${GREEN}When you get a domain name later:${NC}"
+echo "  1. Edit /etc/nginx/sites-available/$APP_NAME"
+echo "  2. Change 'server_name _;' to 'server_name yourdomain.com;'"
+echo "  3. Restart nginx: sudo systemctl restart nginx"
