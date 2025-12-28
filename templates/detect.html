@@ -283,8 +283,15 @@
                     ingredientList.appendChild(li);
                 });
 
+                // Remove existing recipe button if any
+                const existingBtn = document.getElementById('generateRecipeBtn');
+                if (existingBtn) {
+                    existingBtn.remove();
+                }
+
                 // Show recipe generation button
                 const recipeBtn = document.createElement('button');
+                recipeBtn.id = 'generateRecipeBtn';
                 recipeBtn.className = 'btn btn-primary mt-4';
                 recipeBtn.innerHTML = '<i class="fas fa-magic me-2"></i>Generate Recipe';
                 recipeBtn.onclick = () => generateRecipe(data.ingredients);

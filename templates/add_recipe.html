@@ -182,6 +182,7 @@
                     alert('Error: ' + data.error);
                 } else {
                     document.getElementById('name').value = data.name;
+                    document.getElementById('img_url').value = data.image_url;
                     document.getElementById('ingredients').value = data.ingredients.join('\n');
                     document.getElementById('recipe').value = data.recipe;
                     bootstrap.Modal.getInstance(document.getElementById('aiModal')).hide();
