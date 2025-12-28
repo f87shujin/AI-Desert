@@ -169,6 +169,9 @@
         const userInput = document.getElementById('userInput');
         const sendButton = document.getElementById('sendButton');
         const loading = document.getElementById('loading');
+        
+        // Store conversation history for context
+        let conversationHistory = [];
 
         function formatTime() {
             return new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' });
@@ -228,13 +231,22 @@
             userInput.value = '';
             loading.style.display = 'block';
 
+            // Add to conversation history
+            conversationHistory.push({
+                role: 'user',
+                content: message
+            });
+
             try {
                 const response = await fetch('/api/chat', {
                     method: 'POST',
                     headers: {
                         'Content-Type': 'application/json',
                     },
-                    body: JSON.stringify({ prompt: message }),
+                    body: JSON.stringify({ 
+                        prompt: message,
+                        history: conversationHistory.slice(-20) // Send last 20 messages for context
+                    }),
                 });
 
                 const data = await response.json();
@@ -242,6 +254,11 @@
                     addMessage('Sorry, there was an error processing your request.');
                 } else {
                     addMessage(data.response);
+                    // Add assistant response to history
+                    conversationHistory.push({
+                        role: 'assistant',
+                        content: data.response
+                    });
                 }
             } catch (error) {
                 addMessage('Sorry, there was an error connecting to the AI server.');

@@ -181,10 +181,10 @@
                 if (data.error) {
                     alert('Error: ' + data.error);
                 } else {
-                    document.getElementById('name').value = data.name;
-                    document.getElementById('img_url').value = data.image_url;
-                    document.getElementById('ingredients').value = data.ingredients.join('\n');
-                    document.getElementById('recipe').value = data.recipe;
+                    document.getElementById('name').value = data.name || '';
+                    document.getElementById('img_url').value = data.image_url || 'https://via.placeholder.com/400x300?text=Recipe+Image';
+                    document.getElementById('ingredients').value = data.ingredients ? data.ingredients.join('\n') : '';
+                    document.getElementById('recipe').value = data.recipe || '';
                     bootstrap.Modal.getInstance(document.getElementById('aiModal')).hide();
                 }
             })

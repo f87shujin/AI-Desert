@@ -40,12 +40,41 @@ CLIENT = InferenceHTTPClient(
 
 def fetch_recipe_image(recipe_name):
     """Fetch a random recipe image from Google Custom Search API"""
+    # Blacklisted domains that often have loading issues
+    BLACKLISTED_DOMAINS = [
+        'facebook.com', 'fb.com', 'fbcdn.net',
+        'instagram.com', 'cdninstagram.com',
+        'twitter.com', 'twimg.com',
+        'linkedin.com', 'licdn.com'
+    ]
+    
+    def is_valid_image_url(url):
+        """Check if image URL is from a valid source"""
+        url_lower = url.lower()
+        # Check if URL is from blacklisted domain
+        for domain in BLACKLISTED_DOMAINS:
+            if domain in url_lower:
+                return False
+        # Prefer common image formats
+        return any(ext in url_lower for ext in ['.jpg', '.jpeg', '.png', '.webp']) or 'image' in url_lower
+    
     try:
-        # Use a random API key from the list
-        api_key = random.choice([key for key in GOOGLE_API_KEYS if key])
+        # Filter out None values from API keys
+        valid_keys = [key for key in GOOGLE_API_KEYS if key]
         
-        if not api_key or not GOOGLE_SEARCH_ENGINE_ID:
-            return None
+        print(f"DEBUG: GOOGLE_API_KEYS loaded: {len(valid_keys)} valid keys")
+        print(f"DEBUG: GOOGLE_SEARCH_ENGINE_ID: {GOOGLE_SEARCH_ENGINE_ID}")
+        
+        if not valid_keys:
+            print("ERROR: No valid Google API keys found")
+            return "https://via.placeholder.com/400x300?text=Recipe+Image"
+        
+        if not GOOGLE_SEARCH_ENGINE_ID:
+            print("ERROR: Google Search Engine ID not found")
+            return "https://via.placeholder.com/400x300?text=Recipe+Image"
+        
+        # Use a random API key from the list
+        api_key = random.choice(valid_keys)
         
         # Make request to Google Custom Search API
         params = {
@@ -58,19 +87,41 @@ def fetch_recipe_image(recipe_name):
             'safe': 'active'
         }
         
-        response = requests.get(GOOGLE_SEARCH_URL, params=params)
+        print(f"Fetching image for: {recipe_name}")
+        print(f"Request URL: {GOOGLE_SEARCH_URL}")
+        response = requests.get(GOOGLE_SEARCH_URL, params=params, timeout=10)
+        print(f"Response status: {response.status_code}")
+        
         response.raise_for_status()
         data = response.json()
         
-        # Get a random image from the results
-        if 'items' in data and len(data['items']) > 0:
-            random_image = random.choice(data['items'])
-            return random_image['link']
+        print(f"Response keys: {data.keys()}")
         
-        return None
+        # Get valid images from the results
+        if 'items' in data and len(data['items']) > 0:
+            # Filter valid image URLs
+            valid_images = [item['link'] for item in data['items'] if is_valid_image_url(item['link'])]
+            
+            if valid_images:
+                image_url = random.choice(valid_images)
+                print(f"SUCCESS: Found image: {image_url}")
+                return image_url
+            else:
+                print("WARNING: No valid images after filtering")
+                return "https://via.placeholder.com/400x300?text=Recipe+Image"
+        else:
+            print(f"WARNING: No images found. Response: {data}")
+            return "https://via.placeholder.com/400x300?text=Recipe+Image"
+    except requests.exceptions.RequestException as e:
+        print(f"REQUEST ERROR: {str(e)}")
+        if hasattr(e, 'response') and e.response is not None:
+            print(f"Response text: {e.response.text}")
+        return "https://via.placeholder.com/400x300?text=Recipe+Image"
     except Exception as e:
-        print(f"Error fetching image: {str(e)}")
-        return None
+        print(f"GENERAL ERROR: {str(e)}")
+        import traceback
+        traceback.print_exc()
+        return "https://via.placeholder.com/400x300?text=Recipe+Image"
 
 def get_session_id():
     """Get or create session ID for the current user"""
@@ -276,8 +327,30 @@ def detect_ingredients():
 def chat_api():
     data = request.json
     prompt = data.get('prompt', '')
+    chat_history = data.get('history', [])  # Get conversation history
     
     try:
+        # Build messages with context
+        messages = [
+            {"role": "system", "content": """You are an expert professional chef and culinary advisor with years of experience. 
+You help users with:
+- Cooking techniques and tips
+- Recipe suggestions and modifications
+- Ingredient substitutions
+- Kitchen equipment advice
+- Food safety and storage
+- Dietary accommodations
+
+Provide detailed, practical, and friendly advice. When discussing recipes, be specific about measurements, temperatures, and timing."""}
+        ]
+        
+        # Add conversation history (limit to last 10 messages for context)
+        for msg in chat_history[-10:]:
+            messages.append(msg)
+        
+        # Add current user prompt
+        messages.append({"role": "user", "content": prompt})
+        
         response = requests.post(
             DEEPSEEK_API_URL,
             headers={
@@ -286,11 +359,9 @@ def chat_api():
             },
             json={
                 "model": DEEPSEEK_MODEL,
-                "messages": [
-                    {"role": "system", "content": "You are a professional chef assistant who helps with cooking questions and recipe advice."},
-                    {"role": "user", "content": prompt}
-                ],
-                "temperature": 0.7
+                "messages": messages,
+                "temperature": 0.7,
+                "max_tokens": 2000
             }
         )
         response.raise_for_status()
@@ -326,14 +397,29 @@ def generate_recipe_from_detect():
             json={
                 "model": DEEPSEEK_MODEL,
                 "messages": [
-                    {"role": "system", "content": "You are a professional chef who creates recipes based on available ingredients."},
-                    {"role": "user", "content": f"""Based on the following detected ingredients and their confidence scores, create a recipe:
+                    {"role": "system", "content": """You are a creative professional chef who creates delicious recipes based on available ingredients.
+Your recipes should be:
+- Practical and easy to follow
+- Include specific measurements and cooking times
+- Use proper cooking terminology
+- Include helpful tips and techniques
+- Consider flavor combinations and textures"""},
+                    {"role": "user", "content": f"""Based on the following detected ingredients, create a complete recipe:
 
 {ingredients_text}
 
-Please create a recipe that primarily uses the high-confidence ingredients and suggests substitutions for low-confidence ones."""}
+Please:
+1. Suggest a creative dish name
+2. List all ingredients with measurements (use high-confidence ingredients as the base)
+3. Provide step-by-step cooking instructions with temperatures and timing
+4. Include any additional common pantry items needed
+5. Add serving suggestions and optional garnishes
+6. Mention possible substitutions for low-confidence ingredients
+
+Format your response in a clear, cookbook-style format."""}
                 ],
-                "temperature": 0.7
+                "temperature": 0.7,
+                "max_tokens": 2000
             }
         )
         response.raise_for_status()
@@ -363,25 +449,33 @@ def generate_recipe_from_name():
             json={
                 "model": DEEPSEEK_MODEL,
                 "messages": [
-                    {"role": "system", "content": "You are a professional chef who creates detailed recipes. Always respond with valid JSON."},
-                    {"role": "user", "content": f"""Create a detailed recipe for {dish_name}. Format the response as a JSON object with these exact fields:
+                    {"role": "system", "content": """You are a professional chef who creates detailed, structured recipes. 
+You MUST respond with ONLY a valid JSON object, no additional text before or after.
+Your recipes should be authentic, practical, and include proper measurements and techniques."""},
+                    {"role": "user", "content": f"""Create a detailed recipe for {dish_name}. 
+
+Respond with ONLY a JSON object in this EXACT format (no other text):
 
 {{
-    "name": "Creative name for the recipe",
+    "name": "Proper name for the {dish_name}",
     "ingredients": [
-        "1 cup flour",
-        "2 eggs",
-        "etc..."
+        "1 cup all-purpose flour",
+        "2 large eggs",
+        "1/2 teaspoon salt"
     ],
-    "recipe": "Step 1: Do this...\nStep 2: Then do that..."
+    "recipe": "Step 1: Preheat oven to 350°F (175°C).\\nStep 2: Mix dry ingredients in a large bowl.\\nStep 3: Continue with detailed instructions..."
 }}
 
-Make sure to:
-1. Only return the JSON object, nothing else
-2. Ingredients should be strings, not objects
-3. Each ingredient should include both quantity and name"""}
+Requirements:
+- Use specific measurements (cups, tablespoons, grams, etc.)
+- Include temperatures and cooking times
+- Write clear, numbered step-by-step instructions
+- Add helpful cooking tips in the instructions
+- Each ingredient must be a complete string with quantity and name
+- Separate steps with \\n for line breaks"""}
                 ],
-                "temperature": 0.7
+                "temperature": 0.7,
+                "max_tokens": 2000
             }
         )
         response.raise_for_status()
@@ -400,7 +494,7 @@ Make sure to:
         
         # Convert ingredients to strings if they're objects
         ingredients = []
-        for ingredient in recipe_data['ingredients']:
+        for ingredient in recipe_data.get('ingredients', []):
             if isinstance(ingredient, dict):
                 # If it's an object, try to format it as a string
                 quantity = ingredient.get('quantity', '')
@@ -411,15 +505,12 @@ Make sure to:
                 ingredients.append(str(ingredient))
         
         # Fetch image from Google
-        image_url = fetch_recipe_image(recipe_data['name'])
-        if not image_url:
-            # Fallback to a placeholder if image fetch fails
-            image_url = "https://via.placeholder.com/400x300?text=Recipe+Image"
+        image_url = fetch_recipe_image(recipe_data.get('name', dish_name))
         
         return jsonify({
-            'name': recipe_data['name'],
+            'name': recipe_data.get('name', dish_name),
             'ingredients': ingredients,
-            'recipe': recipe_data['recipe'],
+            'recipe': recipe_data.get('recipe', ''),
             'image_url': image_url
         })
     
