@@ -64,11 +64,33 @@ fi
 
 # Step 8: Update systemd service file
 echo -e "${GREEN}Step 8: Setting up systemd service...${NC}"
-# Update paths in service file
-sudo sed -i "s|/home/yourusername|/home/$(whoami)|g" $APP_DIR/ai-desert.service
+
+# Create service file with correct paths
+cat > /tmp/ai-desert.service << EOF
+[Unit]
+Description=AI Desert Recipe Book Application
+After=network.target
+
+[Service]
+Type=notify
+User=$(whoami)
+Group=$(whoami)
+WorkingDirectory=$APP_DIR
+Environment="PATH=$VENV_DIR/bin"
+ExecStart=$VENV_DIR/bin/gunicorn --config gunicorn_config.py app:app
+ExecReload=/bin/kill -s HUP \$MAINPID
+KillMode=mixed
+TimeoutStopSec=5
+PrivateTmp=true
+Restart=always
+RestartSec=10
+
+[Install]
+WantedBy=multi-user.target
+EOF
 
 # Copy service file
-sudo cp $APP_DIR/ai-desert.service /etc/systemd/system/
+sudo cp /tmp/ai-desert.service /etc/systemd/system/
 
 # Reload systemd
 sudo systemctl daemon-reload
