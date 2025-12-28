@@ -238,7 +238,7 @@ def chat():
     return render_template('chat.html')
 
 @app.route('/detect')
-def detect_page():
+def detect():
     return render_template('detect.html')
 
 @app.route('/api/detect', methods=['POST'])
