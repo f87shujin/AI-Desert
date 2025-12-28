@@ -20,8 +20,25 @@ load_dotenv()
 app = Flask(__name__)
 app.secret_key = os.getenv('SECRET_KEY', secrets.token_hex(32))
 
+# Middleware to handle /recipes prefix from nginx
+class PrefixMiddleware:
+    def __init__(self, app, prefix=''):
+        self.app = app
+        self.prefix = prefix
+
+    def __call__(self, environ, start_response):
+        if self.prefix:
+            script_name = environ.get('HTTP_X_SCRIPT_NAME', '')
+            if script_name:
+                environ['SCRIPT_NAME'] = script_name
+                path_info = environ['PATH_INFO']
+                if path_info.startswith(script_name):
+                    environ['PATH_INFO'] = path_info[len(script_name):]
+        return self.app(environ, start_response)
+
 # Handle proxy headers for proper URL generation behind nginx
 app.wsgi_app = ProxyFix(app.wsgi_app, x_for=1, x_proto=1, x_host=1, x_prefix=1)
+app.wsgi_app = PrefixMiddleware(app.wsgi_app, prefix='/recipes')
 
 # MongoDB connection
 client = MongoClient(os.getenv('MONGODB_URI'))
