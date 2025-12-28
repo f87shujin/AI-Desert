@@ -7,8 +7,8 @@ echo ""
 
 # Configuration
 APP_NAME="ai-desert"
-APP_DIR="/home/$(whoami)/AI-Desert"
-VENV_DIR="$APP_DIR/.venv"
+APP_DIR="$(pwd)"
+VENV_DIR="$APP_DIR/venv"
 LOG_DIR="/var/log/$APP_NAME"
 
 # Colors
@@ -27,12 +27,7 @@ sudo apt install -y python3 python3-pip python3-venv nginx git
 
 # Step 3: Clone or update repository
 echo -e "${GREEN}Step 3: Setting up application directory...${NC}"
-if [ ! -d "$APP_DIR" ]; then
-    echo "Creating directory: $APP_DIR"
-    mkdir -p $APP_DIR
-fi
-
-cd $APP_DIR
+cd "$APP_DIR"
 
 # Step 4: Create virtual environment
 echo -e "${GREEN}Step 4: Creating Python virtual environment...${NC}"
