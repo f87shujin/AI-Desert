@@ -12,3 +12,4 @@ yolov8n.pt
 *.pt
 .DS_Store
 Thumbs.db
+.env
