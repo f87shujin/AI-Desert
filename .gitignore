@@ -1,0 +1,14 @@
+# Add these to .gitignore
+.env
+*.pyc
+__pycache__/
+*.log
+.venv/
+venv/
+*.pid
+temp_image.jpg
+annotated_image.jpg
+yolov8n.pt
+*.pt
+.DS_Store
+Thumbs.db
