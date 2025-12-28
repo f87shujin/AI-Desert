@@ -81,7 +81,6 @@ ExecStart=$VENV_DIR/bin/gunicorn --config gunicorn_config.py app:app
 ExecReload=/bin/kill -s HUP \$MAINPID
 KillMode=mixed
 TimeoutStopSec=5
-PrivateTmp=true
 Restart=always
 RestartSec=10
 
